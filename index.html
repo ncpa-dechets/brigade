@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#B91E27">
+<title>Brigade Verte — Signalements NCPA</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<style>
+:root{
+  --rouge:#B91E27;
+  --rouge-fonce:#8F161E;
+  --vert:#B1B993;
+  --vert-fonce:#7C8560;
+  --encre:#23211E;
+  --gris:#6B675F;
+  --fond:#F5F4F0;
+  --carte:#FFFFFF;
+  --ligne:#E3E1DA;
+  --attente:#C0781C;
+  --radius:14px;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html{font-size:16px}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  background:var(--fond);color:var(--encre);
+  min-height:100dvh;display:flex;flex-direction:column;
+  padding-bottom:env(safe-area-inset-bottom);
+}
+button{font:inherit;cursor:pointer;border:none;background:none;color:inherit}
+input,textarea,select{font:inherit;color:inherit}
+.eyebrow{font-size:.72rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--gris)}
+
+/* ── En-tête ─────────────────────────── */
+header{
+  background:var(--rouge);color:#fff;
+  padding:calc(env(safe-area-inset-top) + 12px) 18px 12px;
+  display:flex;align-items:center;gap:12px;
+  position:sticky;top:0;z-index:20;
+}
+header .titre{flex:1}
+header .titre h1{font-size:1.05rem;font-weight:800;letter-spacing:.01em;line-height:1.2}
+header .titre small{font-size:.72rem;font-weight:500;opacity:.85;letter-spacing:.06em;text-transform:uppercase}
+.btn-reglages{width:42px;height:42px;border-radius:50%;display:grid;place-items:center;background:rgba(255,255,255,.14)}
+.btn-reglages:active{background:rgba(255,255,255,.28)}
+
+/* ── Bandeau de synchro ──────────────── */
+#bandeau{
+  display:flex;align-items:center;gap:10px;
+  padding:9px 18px;font-size:.82rem;font-weight:600;
+  border-bottom:1px solid var(--ligne);background:var(--carte);
+}
+#bandeau .pastille{width:9px;height:9px;border-radius:50%;flex:none}
+#bandeau.ok .pastille{background:var(--vert-fonce)}
+#bandeau.attente .pastille{background:var(--attente);animation:pulse 1.6s infinite}
+#bandeau.horsligne .pastille{background:var(--gris)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+#bandeau .msg{flex:1;color:var(--gris)}
+#bandeau.attente .msg{color:var(--attente)}
+#btn-sync{font-size:.78rem;font-weight:700;color:var(--rouge);padding:6px 10px;border-radius:8px;border:1.5px solid var(--rouge)}
+#btn-sync:disabled{opacity:.35;border-color:var(--gris);color:var(--gris)}
+
+/* ── Écrans ──────────────────────────── */
+main{flex:1;width:100%;max-width:560px;margin:0 auto;padding:18px}
+.ecran{display:none}
+.ecran.actif{display:block;animation:app .18s ease}
+@keyframes app{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+/* ── Accueil ─────────────────────────── */
+#btn-nouveau{
+  width:100%;background:var(--rouge);color:#fff;border-radius:var(--radius);
+  padding:20px;display:flex;align-items:center;gap:16px;
+  box-shadow:0 4px 14px rgba(185,30,39,.25);
+  transition:transform .1s;
+}
+#btn-nouveau:active{transform:scale(.985);background:var(--rouge-fonce)}
+#btn-nouveau .plus{width:46px;height:46px;border-radius:50%;background:rgba(255,255,255,.18);display:grid;place-items:center;font-size:1.7rem;font-weight:300;flex:none}
+#btn-nouveau .lbl{text-align:left}
+#btn-nouveau .lbl b{display:block;font-size:1.12rem;font-weight:800}
+#btn-nouveau .lbl span{font-size:.8rem;opacity:.85}
+
+.section-titre{display:flex;align-items:baseline;justify-content:space-between;margin:26px 0 10px}
+.section-titre .compte{font-size:.78rem;color:var(--gris);font-weight:600}
+
+#liste{display:flex;flex-direction:column;gap:10px}
+.rapport{
+  background:var(--carte);border:1px solid var(--ligne);border-radius:var(--radius);
+  padding:13px 15px;display:flex;gap:12px;align-items:center;
+}
+.rapport .vignette{
+  width:52px;height:52px;border-radius:10px;flex:none;object-fit:cover;
+  background:var(--fond);border:1px solid var(--ligne);
+}
+.rapport .vignette.vide{display:grid;place-items:center;color:var(--gris);font-size:1.2rem}
+.rapport .infos{flex:1;min-width:0}
+.rapport .type{font-weight:700;font-size:.92rem}
+.rapport .meta{font-size:.76rem;color:var(--gris);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.statut{font-size:.68rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:4px 8px;border-radius:99px;flex:none}
+.statut.attente{background:#FAF0E1;color:var(--attente)}
+.statut.envoye{background:#EEF1E4;color:var(--vert-fonce)}
+.vide-msg{text-align:center;color:var(--gris);padding:34px 20px;font-size:.9rem;line-height:1.5}
+.vide-msg .picto{font-size:2rem;display:block;margin-bottom:8px;opacity:.5}
+
+/* ── Formulaire ──────────────────────── */
+.champ{margin-bottom:22px}
+.champ>label{display:block;margin-bottom:9px}
+
+.tuiles{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.tuile{
+  background:var(--carte);border:1.5px solid var(--ligne);border-radius:var(--radius);
+  padding:16px 12px;text-align:center;min-height:92px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;
+  transition:border-color .12s, background .12s;
+}
+.tuile .picto{font-size:1.6rem;line-height:1}
+.tuile b{font-size:.86rem;font-weight:700;line-height:1.25}
+.tuile.sel{border-color:var(--rouge);background:#FBF0F0;box-shadow:inset 0 0 0 1px var(--rouge)}
+.tuile.sel b{color:var(--rouge)}
+
+input[type=text],textarea,select{
+  width:100%;background:var(--carte);border:1.5px solid var(--ligne);
+  border-radius:12px;padding:13px 14px;font-size:1rem;
+}
+input:focus,textarea:focus,select:focus{outline:2px solid var(--rouge);outline-offset:1px;border-color:transparent}
+textarea{resize:vertical;min-height:88px}
+
+/* Photos */
+#grille-photos{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.photo-cadre{position:relative;aspect-ratio:1;border-radius:12px;overflow:hidden;border:1px solid var(--ligne)}
+.photo-cadre img{width:100%;height:100%;object-fit:cover;display:block}
+.photo-suppr{
+  position:absolute;top:5px;right:5px;width:26px;height:26px;border-radius:50%;
+  background:rgba(35,33,30,.75);color:#fff;font-size:.85rem;display:grid;place-items:center;
+}
+#btn-photo{
+  aspect-ratio:1;border:1.5px dashed var(--gris);border-radius:12px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;
+  color:var(--gris);font-size:.72rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;
+  background:var(--carte);
+}
+#btn-photo:active{border-color:var(--rouge);color:var(--rouge)}
+#btn-photo .picto{font-size:1.5rem}
+
+/* GPS */
+#carte-gps{
+  background:var(--carte);border:1px solid var(--ligne);border-radius:var(--radius);
+  padding:14px 15px;display:flex;align-items:center;gap:12px;
+}
+#carte-gps .picto-gps{
+  width:40px;height:40px;border-radius:50%;display:grid;place-items:center;flex:none;
+  background:var(--fond);font-size:1.2rem;
+}
+#carte-gps.ok .picto-gps{background:#EEF1E4}
+#carte-gps .detail{flex:1;min-width:0}
+#carte-gps .coord{font-weight:700;font-size:.9rem;font-variant-numeric:tabular-nums}
+#carte-gps .precision{font-size:.76rem;color:var(--gris);margin-top:1px}
+#btn-gps{font-size:.78rem;font-weight:700;color:var(--rouge);padding:7px 10px;border-radius:8px;border:1.5px solid var(--rouge);flex:none}
+
+.actions{display:flex;gap:10px;margin-top:28px}
+.btn{flex:1;padding:16px;border-radius:var(--radius);font-weight:800;font-size:1rem;text-align:center}
+.btn-primaire{background:var(--rouge);color:#fff}
+.btn-primaire:active{background:var(--rouge-fonce)}
+.btn-primaire:disabled{background:#D8D5CE;color:#8B877E}
+.btn-secondaire{background:var(--carte);border:1.5px solid var(--ligne);color:var(--gris);flex:0 0 auto;padding:16px 20px}
+
+/* ── Réglages ────────────────────────── */
+.carte-bloc{background:var(--carte);border:1px solid var(--ligne);border-radius:var(--radius);padding:16px;margin-bottom:14px}
+.carte-bloc h3{font-size:.95rem;margin-bottom:4px}
+.carte-bloc p{font-size:.8rem;color:var(--gris);line-height:1.5;margin-bottom:12px}
+.btn-large{width:100%;padding:14px;border-radius:12px;font-weight:700;font-size:.92rem}
+.btn-contour{border:1.5px solid var(--rouge);color:var(--rouge)}
+.btn-contour:disabled{border-color:var(--ligne);color:var(--gris)}
+.btn-danger{border:1.5px solid var(--ligne);color:var(--gris);margin-top:8px}
+
+/* ── Toast ───────────────────────────── */
+#toast{
+  position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom));transform:translateX(-50%) translateY(20px);
+  background:var(--encre);color:#fff;padding:12px 20px;border-radius:99px;
+  font-size:.86rem;font-weight:600;opacity:0;pointer-events:none;transition:.25s;z-index:50;
+  max-width:90vw;text-align:center;
+}
+#toast.visible{opacity:1;transform:translateX(-50%) translateY(0)}
+
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="titre">
+    <h1>Brigade Verte</h1>
+    <small>Signalements terrain · NCPA</small>
+  </div>
+  <button class="btn-reglages" id="btn-vers-reglages" aria-label="Réglages">⚙︎</button>
+</header>
+
+<div id="bandeau" class="ok">
+  <span class="pastille"></span>
+  <span class="msg" id="bandeau-msg">Aucun signalement en attente</span>
+  <button id="btn-sync" disabled>Synchroniser</button>
+</div>
+
+<main>
+
+  <!-- ══ ACCUEIL ══ -->
+  <section class="ecran actif" id="ecran-accueil">
+    <button id="btn-nouveau">
+      <span class="plus">+</span>
+      <span class="lbl"><b>Nouveau signalement</b><span>Photo · GPS · fonctionne hors ligne</span></span>
+    </button>
+
+    <div class="section-titre">
+      <span class="eyebrow">Signalements récents</span>
+      <span class="compte" id="compte-liste"></span>
+    </div>
+    <div id="liste"></div>
+  </section>
+
+  <!-- ══ FORMULAIRE ══ -->
+  <section class="ecran" id="ecran-form">
+
+    <div class="champ">
+      <label class="eyebrow">Type de signalement</label>
+      <div class="tuiles" id="tuiles-type">
+        <button class="tuile" data-type="Débordement PDR"><span class="picto">🗑️</span><b>Débordement<br>PDR / PAV</b></button>
+        <button class="tuile" data-type="Vandalisme"><span class="picto">⚠️</span><b>Vandalisme<br>dégradation</b></button>
+        <button class="tuile" data-type="Dépôt sauvage"><span class="picto">📦</span><b>Dépôt<br>sauvage</b></button>
+        <button class="tuile" data-type="Autre"><span class="picto">✏️</span><b>Autre<br>anomalie</b></button>
+      </div>
+    </div>
+
+    <div class="champ">
+      <label class="eyebrow" for="champ-lieu">Site / adresse (facultatif)</label>
+      <input type="text" id="champ-lieu" placeholder="Ex. : PDR rue de la Mer, Cabourg" autocomplete="off">
+    </div>
+
+    <div class="champ">
+      <label class="eyebrow">Photos (max. 3)</label>
+      <div id="grille-photos">
+        <button id="btn-photo"><span class="picto">📷</span>Ajouter</button>
+      </div>
+      <input type="file" id="input-photo" accept="image/*" capture="environment" hidden>
+    </div>
+
+    <div class="champ">
+      <label class="eyebrow">Position GPS</label>
+      <div id="carte-gps">
+        <span class="picto-gps">📍</span>
+        <span class="detail">
+          <span class="coord" id="gps-coord">Recherche en cours…</span>
+          <span class="precision" id="gps-precision"></span>
+        </span>
+        <button id="btn-gps">Actualiser</button>
+      </div>
+    </div>
+
+    <div class="champ">
+      <label class="eyebrow" for="champ-comm">Commentaire (facultatif)</label>
+      <textarea id="champ-comm" placeholder="Détails utiles : volume estimé, type de déchets, urgence…"></textarea>
+    </div>
+
+    <div class="actions">
+      <button class="btn btn-secondaire" id="btn-annuler">Annuler</button>
+      <button class="btn btn-primaire" id="btn-enregistrer" disabled>Enregistrer</button>
+    </div>
+  </section>
+
+  <!-- ══ RÉGLAGES ══ -->
+  <section class="ecran" id="ecran-reglages">
+    <div class="section-titre"><span class="eyebrow">Réglages</span></div>
+
+    <div class="carte-bloc">
+      <h3>Agent</h3>
+      <p>Nom joint à chaque signalement pour identifier son auteur.</p>
+      <input type="text" id="reg-agent" placeholder="Prénom NOM" autocomplete="name">
+    </div>
+
+    <div class="carte-bloc">
+      <h3>Adresse de synchronisation</h3>
+      <p>URL du point de collecte des données (ex. flux Power Automate vers une liste SharePoint). Laisser vide pour utiliser uniquement l'export de fichier.</p>
+      <input type="text" id="reg-endpoint" placeholder="https://…" inputmode="url" autocomplete="off">
+    </div>
+
+    <div class="carte-bloc">
+      <h3>Exporter les signalements</h3>
+      <p>Génère un fichier JSON (photos incluses) à transmettre par mail ou messagerie — utile tant qu'aucune adresse de synchronisation n'est configurée.</p>
+      <button class="btn-large btn-contour" id="btn-export">Exporter tout en fichier</button>
+      <button class="btn-large btn-danger" id="btn-purge">Supprimer les signalements synchronisés</button>
+    </div>
+
+    <div class="actions">
+      <button class="btn btn-primaire" id="btn-reg-retour">Enregistrer et revenir</button>
+    </div>
+  </section>
+
+</main>
+
+<div id="toast" role="status"></div>
+
+<script>
+/* ═══════════════════════════════════════════════════════
+   Brigade Verte NCPA — v1
+   Stockage local : IndexedDB (base "ncpa-brigade")
+   ═══════════════════════════════════════════════════════ */
+
+// ── IndexedDB : ouverture ──────────────────────────────
+let db;
+function ouvrirDB(){
+  return new Promise((res, rej) => {
+    const req = indexedDB.open('ncpa-brigade', 1);
+    req.onupgradeneeded = e => {
+      const d = e.target.result;
+      const store = d.createObjectStore('rapports', { keyPath: 'id' });
+      store.createIndex('statut', 'statut');
+    };
+    req.onsuccess = e => { db = e.target.result; res(); };
+    req.onerror = () => rej(req.error);
+  });
+}
+function tx(mode){ return db.transaction('rapports', mode).objectStore('rapports'); }
+function dbAjouter(r){ return new Promise((res,rej)=>{ const q=tx('readwrite').put(r); q.onsuccess=res; q.onerror=()=>rej(q.error); }); }
+function dbTous(){ return new Promise((res,rej)=>{ const q=tx('readonly').getAll(); q.onsuccess=()=>res(q.result); q.onerror=()=>rej(q.error); }); }
+function dbSuppr(id){ return new Promise((res,rej)=>{ const q=tx('readwrite').delete(id); q.onsuccess=res; q.onerror=()=>rej(q.error); }); }
+
+// ── État du formulaire en cours ────────────────────────
+let brouillon = null;
+
+// ── Navigation entre écrans ────────────────────────────
+function afficher(id){
+  document.querySelectorAll('.ecran').forEach(e => e.classList.remove('actif'));
+  document.getElementById(id).classList.add('actif');
+  window.scrollTo(0, 0);
+}
+
+// ── Toast ──────────────────────────────────────────────
+let toastTimer;
+function toast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('visible');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('visible'), 3000);
+}
+
+// ── Bandeau de synchro ─────────────────────────────────
+async function majBandeau(){
+  const tous = await dbTous();
+  const attente = tous.filter(r => r.statut === 'attente').length;
+  const b = document.getElementById('bandeau');
+  const msg = document.getElementById('bandeau-msg');
+  const btn = document.getElementById('btn-sync');
+  if (!navigator.onLine){
+    b.className = 'horsligne';
+    msg.textContent = attente
+      ? `Hors ligne — ${attente} signalement${attente>1?'s':''} en attente`
+      : 'Hors ligne — les signalements seront conservés';
+    btn.disabled = true;
+  } else if (attente){
+    b.className = 'attente';
+    msg.textContent = `${attente} signalement${attente>1?'s':''} à synchroniser`;
+    btn.disabled = false;
+  } else {
+    b.className = 'ok';
+    msg.textContent = 'Aucun signalement en attente';
+    btn.disabled = true;
+  }
+}
+window.addEventListener('online',  () => { majBandeau(); synchroniser(true); });
+window.addEventListener('offline', majBandeau);
+
+// ── Liste des rapports (accueil) ───────────────────────
+const FMT_DATE = new Intl.DateTimeFormat('fr-FR', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' });
+
+async function majListe(){
+  const tous = (await dbTous()).sort((a,b) => b.creeLe - a.creeLe);
+  const liste = document.getElementById('liste');
+  document.getElementById('compte-liste').textContent = tous.length ? `${tous.length} au total` : '';
+  if (!tous.length){
+    liste.innerHTML = '<div class="vide-msg"><span class="picto">🌿</span>Aucun signalement pour le moment.<br>Appuyez sur « Nouveau signalement » pour commencer.</div>';
+    return;
+  }
+  liste.innerHTML = '';
+  for (const r of tous){
+    const div = document.createElement('div');
+    div.className = 'rapport';
+    const meta = [FMT_DATE.format(new Date(r.creeLe)), r.lieu || null, r.agent || null].filter(Boolean).join(' · ');
+    const statutHtml = r.statut === 'attente'
+      ? '<span class="statut attente">En attente</span>'
+      : '<span class="statut envoye">Envoyé</span>';
+    let vignette = '<span class="vignette vide">📄</span>';
+    div.innerHTML = `${vignette}<span class="infos"><span class="type">${r.type}</span><span class="meta">${meta}</span></span>${statutHtml}`;
+    if (r.photos && r.photos.length){
+      const img = document.createElement('img');
+      img.className = 'vignette';
+      img.alt = '';
+      img.src = URL.createObjectURL(r.photos[0]);
+      div.replaceChild(img, div.firstChild);
+    }
+    liste.appendChild(div);
+  }
+}
+
+// ── Formulaire : ouverture / réinitialisation ──────────
+function nouveauFormulaire(){
+  brouillon = { type:null, photos:[], gps:null };
+  document.querySelectorAll('.tuile').forEach(t => t.classList.remove('sel'));
+  document.getElementById('champ-lieu').value = '';
+  document.getElementById('champ-comm').value = '';
+  majGrillePhotos();
+  majGpsUI(null, 'Recherche en cours…');
+  majBoutonEnregistrer();
+  afficher('ecran-form');
+  capturerGPS();
+}
+
+// ── Type ───────────────────────────────────────────────
+document.getElementById('tuiles-type').addEventListener('click', e => {
+  const t = e.target.closest('.tuile');
+  if (!t) return;
+  document.querySelectorAll('.tuile').forEach(x => x.classList.remove('sel'));
+  t.classList.add('sel');
+  brouillon.type = t.dataset.type;
+  majBoutonEnregistrer();
+});
+
+// ── Photos : capture + compression ─────────────────────
+document.getElementById('btn-photo').addEventListener('click', () => document.getElementById('input-photo').click());
+document.getElementById('input-photo').addEventListener('change', async e => {
+  const fichier = e.target.files[0];
+  e.target.value = '';
+  if (!fichier || brouillon.photos.length >= 3) return;
+  try {
+    const blob = await compresserImage(fichier, 1280, .8);
+    brouillon.photos.push(blob);
+    majGrillePhotos();
+  } catch(err){
+    toast('Photo illisible — réessayez');
+  }
+});
+
+function compresserImage(fichier, maxCote, qualite){
+  return new Promise((res, rej) => {
+    const url = URL.createObjectURL(fichier);
+    const img = new Image();
+    img.onload = () => {
+      const ratio = Math.min(1, maxCote / Math.max(img.width, img.height));
+      const c = document.createElement('canvas');
+      c.width  = Math.round(img.width  * ratio);
+      c.height = Math.round(img.height * ratio);
+      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+      URL.revokeObjectURL(url);
+      c.toBlob(b => b ? res(b) : rej(new Error('toBlob')), 'image/jpeg', qualite);
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); rej(new Error('load')); };
+    img.src = url;
+  });
+}
+
+function majGrillePhotos(){
+  const grille = document.getElementById('grille-photos');
+  grille.querySelectorAll('.photo-cadre').forEach(n => n.remove());
+  const btn = document.getElementById('btn-photo');
+  brouillon.photos.forEach((blob, i) => {
+    const cadre = document.createElement('div');
+    cadre.className = 'photo-cadre';
+    const img = document.createElement('img');
+    img.alt = `Photo ${i+1}`;
+    img.src = URL.createObjectURL(blob);
+    const suppr = document.createElement('button');
+    suppr.className = 'photo-suppr';
+    suppr.textContent = '✕';
+    suppr.setAttribute('aria-label', 'Supprimer la photo');
+    suppr.onclick = () => { brouillon.photos.splice(i,1); majGrillePhotos(); };
+    cadre.append(img, suppr);
+    grille.insertBefore(cadre, btn);
+  });
+  btn.style.display = brouillon.photos.length >= 3 ? 'none' : '';
+}
+
+// ── GPS ────────────────────────────────────────────────
+function capturerGPS(){
+  if (!('geolocation' in navigator)){
+    majGpsUI(null, 'GPS non disponible sur cet appareil');
+    return;
+  }
+  majGpsUI(null, 'Recherche en cours…');
+  navigator.geolocation.getCurrentPosition(
+    pos => {
+      brouillon.gps = {
+        lat: +pos.coords.latitude.toFixed(6),
+        lon: +pos.coords.longitude.toFixed(6),
+        precision: Math.round(pos.coords.accuracy)
+      };
+      majGpsUI(brouillon.gps);
+    },
+    err => {
+      const messages = {1:'Accès refusé — autorisez la localisation', 2:'Position indisponible', 3:'Délai dépassé — réessayez'};
+      majGpsUI(null, messages[err.code] || 'Erreur GPS');
+    },
+    { enableHighAccuracy:true, timeout:15000, maximumAge:30000 }
+  );
+}
+document.getElementById('btn-gps').addEventListener('click', capturerGPS);
+
+function majGpsUI(gps, message){
+  const carte = document.getElementById('carte-gps');
+  const coord = document.getElementById('gps-coord');
+  const prec  = document.getElementById('gps-precision');
+  if (gps){
+    carte.classList.add('ok');
+    coord.textContent = `${gps.lat}, ${gps.lon}`;
+    prec.textContent  = `Précision ± ${gps.precision} m`;
+  } else {
+    carte.classList.remove('ok');
+    coord.textContent = message;
+    prec.textContent  = '';
+  }
+}
+
+// ── Bouton Enregistrer ─────────────────────────────────
+function majBoutonEnregistrer(){
+  document.getElementById('btn-enregistrer').disabled = !(brouillon && brouillon.type);
+}
+
+// ── Enregistrement du rapport ──────────────────────────
+document.getElementById('btn-enregistrer').addEventListener('click', async () => {
+  if (!brouillon.type) return;
+  const rapport = {
+    id: 'sig-' + Date.now() + '-' + Math.random().toString(36).slice(2,7),
+    creeLe: Date.now(),
+    agent: localStorage.getItem('bv-agent') || '',
+    type: brouillon.type,
+    lieu: document.getElementById('champ-lieu').value.trim(),
+    commentaire: document.getElementById('champ-comm').value.trim(),
+    gps: brouillon.gps,
+    photos: brouillon.photos,
+    statut: 'attente'
+  };
+  await dbAjouter(rapport);
+  afficher('ecran-accueil');
+  await majListe();
+  await majBandeau();
+  toast(navigator.onLine ? 'Signalement enregistré' : 'Enregistré — sera synchronisé au retour du réseau');
+  if (navigator.onLine) synchroniser(true);
+});
+
+document.getElementById('btn-annuler').addEventListener('click', () => afficher('ecran-accueil'));
+document.getElementById('btn-nouveau').addEventListener('click', nouveauFormulaire);
+
+// ── Synchronisation ────────────────────────────────────
+function blobEnBase64(blob){
+  return new Promise((res, rej) => {
+    const r = new FileReader();
+    r.onload  = () => res(r.result.split(',')[1]);
+    r.onerror = () => rej(r.error);
+    r.readAsDataURL(blob);
+  });
+}
+
+async function rapportEnJSON(r){
+  const photos = [];
+  for (const p of (r.photos || [])) photos.push(await blobEnBase64(p));
+  return {
+    id: r.id,
+    date: new Date(r.creeLe).toISOString(),
+    agent: r.agent, type: r.type, lieu: r.lieu, commentaire: r.commentaire,
+    latitude:  r.gps ? r.gps.lat : null,
+    longitude: r.gps ? r.gps.lon : null,
+    precision_m: r.gps ? r.gps.precision : null,
+    photos_jpeg_base64: photos
+  };
+}
+
+let syncEnCours = false;
+async function synchroniser(silencieux){
+  if (syncEnCours) return;
+  const endpoint = localStorage.getItem('bv-endpoint') || '';
+  if (!endpoint){
+    if (!silencieux) toast('Aucune adresse de synchronisation — utilisez l\'export (⚙︎)');
+    return;
+  }
+  const attente = (await dbTous()).filter(r => r.statut === 'attente');
+  if (!attente.length) return;
+  syncEnCours = true;
+  let ok = 0, echec = 0;
+  for (const r of attente){
+    try {
+      const rep = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(await rapportEnJSON(r))
+      });
+      if (!rep.ok) throw new Error(rep.status);
+      r.statut = 'envoye';
+      await dbAjouter(r);
+      ok++;
+    } catch { echec++; }
+  }
+  syncEnCours = false;
+  await majListe();
+  await majBandeau();
+  if (ok)    toast(`${ok} signalement${ok>1?'s':''} synchronisé${ok>1?'s':''}`);
+  if (echec && !silencieux) toast(`${echec} envoi${echec>1?'s':''} en échec — réessai plus tard`);
+}
+document.getElementById('btn-sync').addEventListener('click', () => synchroniser(false));
+
+// ── Export fichier (sans backend) ──────────────────────
+document.getElementById('btn-export').addEventListener('click', async () => {
+  const tous = (await dbTous()).sort((a,b) => a.creeLe - b.creeLe);
+  if (!tous.length){ toast('Rien à exporter'); return; }
+  const données = [];
+  for (const r of tous) données.push(await rapportEnJSON(r));
+  const contenu = JSON.stringify({ export_le: new Date().toISOString(), agent: localStorage.getItem('bv-agent') || '', signalements: données }, null, 1);
+  const nom = `signalements-brigade-${new Date().toISOString().slice(0,10)}.json`;
+  const fichier = new File([contenu], nom, { type: 'application/json' });
+
+  // Partage natif (mail, Teams, WhatsApp…) si disponible, sinon téléchargement
+  if (navigator.canShare && navigator.canShare({ files: [fichier] })){
+    try { await navigator.share({ files: [fichier], title: 'Signalements Brigade Verte' }); return; }
+    catch(e){ if (e.name === 'AbortError') return; }
+  }
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(fichier);
+  a.download = nom;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+  toast('Fichier exporté');
+});
+
+// ── Purge des rapports synchronisés ────────────────────
+document.getElementById('btn-purge').addEventListener('click', async () => {
+  const envoyés = (await dbTous()).filter(r => r.statut === 'envoye');
+  if (!envoyés.length){ toast('Aucun signalement synchronisé à supprimer'); return; }
+  if (!confirm(`Supprimer ${envoyés.length} signalement(s) déjà synchronisé(s) de ce téléphone ?`)) return;
+  for (const r of envoyés) await dbSuppr(r.id);
+  await majListe(); await majBandeau();
+  toast('Nettoyage effectué');
+});
+
+// ── Réglages ───────────────────────────────────────────
+document.getElementById('btn-vers-reglages').addEventListener('click', () => {
+  document.getElementById('reg-agent').value    = localStorage.getItem('bv-agent') || '';
+  document.getElementById('reg-endpoint').value = localStorage.getItem('bv-endpoint') || '';
+  afficher('ecran-reglages');
+});
+document.getElementById('btn-reg-retour').addEventListener('click', () => {
+  localStorage.setItem('bv-agent',    document.getElementById('reg-agent').value.trim());
+  localStorage.setItem('bv-endpoint', document.getElementById('reg-endpoint').value.trim());
+  afficher('ecran-accueil');
+  toast('Réglages enregistrés');
+});
+
+// ── Démarrage ──────────────────────────────────────────
+(async function(){
+  await ouvrirDB();
+  await majListe();
+  await majBandeau();
+  if ('serviceWorker' in navigator && location.protocol.startsWith('http')){
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  }
+})();
+</script>
+</body>
+</html>
