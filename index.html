@@ -8,6 +8,7 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="stylesheet" href="leaflet/leaflet.css">
 <style>
 :root{
   --rouge:#B91E27;
@@ -159,6 +160,21 @@ textarea{resize:vertical;min-height:88px}
 #carte-gps .precision{font-size:.76rem;color:var(--gris);margin-top:1px}
 #btn-gps{font-size:.78rem;font-weight:700;color:var(--rouge);padding:7px 10px;border-radius:8px;border:1.5px solid var(--rouge);flex:none}
 
+/* Carte de vérification */
+.bascule-couche{display:flex;gap:8px;margin:12px 0 8px}
+.bascule-couche button{
+  flex:1;padding:9px;border-radius:10px;border:1.5px solid var(--ligne);
+  font-size:.82rem;font-weight:700;color:var(--gris);background:var(--carte);
+  transition:border-color .12s, background .12s, color .12s;
+}
+.bascule-couche button.actif{border-color:var(--rouge);color:var(--rouge);background:#FBF0F0}
+#carte-map{
+  height:220px;border-radius:var(--radius);overflow:hidden;
+  border:1px solid var(--ligne);background:var(--fond);
+}
+.aide-carte{font-size:.74rem;color:var(--gris);margin-top:7px;line-height:1.4}
+.leaflet-control-attribution{font-size:.62rem!important}
+
 .actions{display:flex;gap:10px;margin-top:28px}
 .btn{flex:1;padding:16px;border-radius:var(--radius);font-weight:800;font-size:1rem;text-align:center}
 .btn-primaire{background:var(--rouge);color:#fff}
@@ -255,6 +271,12 @@ textarea{resize:vertical;min-height:88px}
         </span>
         <button id="btn-gps">Actualiser</button>
       </div>
+      <div class="bascule-couche">
+        <button data-couche="plan" class="actif" type="button">Plan</button>
+        <button data-couche="sat" type="button">Satellite</button>
+      </div>
+      <div id="carte-map"></div>
+      <p class="aide-carte">Glissez le repère rouge pour corriger la position si besoin.</p>
     </div>
 
     <div class="champ">
@@ -300,6 +322,7 @@ textarea{resize:vertical;min-height:88px}
 
 <div id="toast" role="status"></div>
 
+<script src="leaflet/leaflet.js"></script>
 <script>
 /* ═══════════════════════════════════════════════════════
    Brigade Verte NCPA — v1
@@ -413,6 +436,11 @@ function nouveauFormulaire(){
   majGpsUI(null, 'Recherche en cours…');
   majBoutonEnregistrer();
   afficher('ecran-form');
+  initCarte();
+  if (carteLeaflet) positionnerCarte(CENTRE_PAR_DEFAUT[0], CENTRE_PAR_DEFAUT[1], 13);
+  // La carte est initialisée pendant que son conteneur peut être encore masqué : on force
+  // Leaflet à recalculer ses dimensions une fois l'écran réellement affiché.
+  setTimeout(() => carteLeaflet && carteLeaflet.invalidateSize(), 60);
   capturerGPS();
 }
 
@@ -495,6 +523,7 @@ function capturerGPS(){
         precision: Math.round(pos.coords.accuracy)
       };
       majGpsUI(brouillon.gps);
+      positionnerCarte(brouillon.gps.lat, brouillon.gps.lon);
     },
     err => {
       const messages = {1:'Accès refusé — autorisez la localisation', 2:'Position indisponible', 3:'Délai dépassé — réessayez'};
@@ -512,12 +541,68 @@ function majGpsUI(gps, message){
   if (gps){
     carte.classList.add('ok');
     coord.textContent = `${gps.lat}, ${gps.lon}`;
-    prec.textContent  = `Précision ± ${gps.precision} m`;
+    prec.textContent  = gps.ajuste ? 'Position ajustée manuellement sur la carte' : `Précision ± ${gps.precision} m`;
   } else {
     carte.classList.remove('ok');
     coord.textContent = message;
     prec.textContent  = '';
   }
+}
+
+// ── Carte (Leaflet) — fonds de carte imposés : CartoDB Light / IGN Géoplateforme ──
+const CENTRE_PAR_DEFAUT = [49.2891, -0.1132]; // Cabourg, repère par défaut avant toute position GPS
+
+const coucheplan = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+  attribution: '© OpenStreetMap, © CARTO',
+  maxZoom: 20, subdomains: 'abcd'
+});
+const coucheSatellite = L.tileLayer('https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=ORTHOIMAGERY.ORTHOPHOTOS&STYLE=normal&FORMAT=image%2Fjpeg&TILEMATRIXSET=PM&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}', {
+  attribution: '© IGN / Géoplateforme',
+  maxNativeZoom: 19, maxZoom: 20
+});
+
+// Repère personnalisé (rouge institutionnel), pas d'icône Leaflet par défaut
+const repereSignalement = L.divIcon({
+  className: 'repere-signalement',
+  html: '<svg width="30" height="42" viewBox="0 0 30 42" xmlns="http://www.w3.org/2000/svg">'
+      + '<path d="M15 0C6.7 0 0 6.7 0 15c0 10.9 15 27 15 27s15-16.1 15-27C30 6.7 23.3 0 15 0z" fill="#B91E27"/>'
+      + '<circle cx="15" cy="15" r="6.2" fill="#fff"/></svg>',
+  iconSize: [30, 42], iconAnchor: [15, 42]
+});
+
+let carteLeaflet, marqueurSignalement, coucheActive = 'plan';
+
+function initCarte(){
+  if (carteLeaflet) return; // déjà créée, on ne recrée pas la carte à chaque ouverture du formulaire
+  carteLeaflet = L.map('carte-map', { attributionControl: true, zoomControl: false })
+    .setView(CENTRE_PAR_DEFAUT, 13);
+  coucheplan.addTo(carteLeaflet);
+  L.control.zoom({ position: 'bottomright' }).addTo(carteLeaflet);
+
+  marqueurSignalement = L.marker(CENTRE_PAR_DEFAUT, { draggable: true, icon: repereSignalement }).addTo(carteLeaflet);
+  marqueurSignalement.on('dragend', () => {
+    const pos = marqueurSignalement.getLatLng();
+    brouillon.gps = { lat: +pos.lat.toFixed(6), lon: +pos.lng.toFixed(6), precision: null, ajuste: true };
+    majGpsUI(brouillon.gps);
+  });
+
+  document.querySelectorAll('.bascule-couche button').forEach(btn => {
+    btn.addEventListener('click', () => basculerCouche(btn.dataset.couche));
+  });
+}
+
+function basculerCouche(nom){
+  if (nom === coucheActive || !carteLeaflet) return;
+  if (nom === 'sat'){ carteLeaflet.removeLayer(coucheplan); coucheSatellite.addTo(carteLeaflet); }
+  else { carteLeaflet.removeLayer(coucheSatellite); coucheplan.addTo(carteLeaflet); }
+  coucheActive = nom;
+  document.querySelectorAll('.bascule-couche button').forEach(b => b.classList.toggle('actif', b.dataset.couche === nom));
+}
+
+function positionnerCarte(lat, lon, zoom){
+  if (!carteLeaflet) return;
+  carteLeaflet.setView([lat, lon], zoom || 18);
+  marqueurSignalement.setLatLng([lat, lon]);
 }
 
 // ── Bouton Enregistrer ─────────────────────────────────
