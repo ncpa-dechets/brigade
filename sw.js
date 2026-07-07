@@ -2,13 +2,15 @@
    Rôle : mettre en cache l'application pour qu'elle s'ouvre sans réseau.
    Les signalements, eux, sont stockés dans IndexedDB (côté page). */
 
-const CACHE = 'ncpa-brigade-v1';
+const CACHE = 'ncpa-brigade-v2'; // v2 : ajout de la carte (Leaflet vendorisé localement)
 const FICHIERS = [
   './',
   './index.html',
   './manifest.webmanifest',
   './icons/icon-192.png',
-  './icons/icon-512.png'
+  './icons/icon-512.png',
+  './leaflet/leaflet.js',
+  './leaflet/leaflet.css'
 ];
 
 // Installation : on précharge l'application dans le cache
