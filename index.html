@@ -83,6 +83,17 @@ main{flex:1;width:100%;max-width:560px;margin:0 auto;padding:18px}
 #btn-nouveau .lbl b{display:block;font-size:1.12rem;font-weight:800}
 #btn-nouveau .lbl span{font-size:.8rem;opacity:.85}
 
+#btn-carte{
+  width:100%;margin-top:10px;background:var(--carte);border:1.5px solid var(--ligne);
+  border-radius:var(--radius);padding:15px 20px;display:flex;align-items:center;gap:14px;
+  transition:background .12s;
+}
+#btn-carte:active{background:var(--fond)}
+#btn-carte .picto{font-size:1.4rem;flex:none}
+#btn-carte .lbl{text-align:left}
+#btn-carte .lbl b{display:block;font-size:.98rem;font-weight:800}
+#btn-carte .lbl span{font-size:.78rem;color:var(--gris)}
+
 .section-titre{display:flex;align-items:baseline;justify-content:space-between;margin:26px 0 10px}
 .section-titre .compte{font-size:.78rem;color:var(--gris);font-weight:600}
 
@@ -102,6 +113,8 @@ main{flex:1;width:100%;max-width:560px;margin:0 auto;padding:18px}
 .statut{font-size:.68rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:4px 8px;border-radius:99px;flex:none}
 .statut.attente{background:#FAF0E1;color:var(--attente)}
 .statut.envoye{background:#EEF1E4;color:var(--vert-fonce)}
+.statut.urgent{background:#FBE7E8;color:var(--rouge)}
+.statut.routine{background:#EEF1E4;color:var(--vert-fonce)}
 .vide-msg{text-align:center;color:var(--gris);padding:34px 20px;font-size:.9rem;line-height:1.5}
 .vide-msg .picto{font-size:2rem;display:block;margin-bottom:8px;opacity:.5}
 
@@ -120,6 +133,8 @@ main{flex:1;width:100%;max-width:560px;margin:0 auto;padding:18px}
 .tuile b{font-size:.86rem;font-weight:700;line-height:1.25}
 .tuile.sel{border-color:var(--rouge);background:#FBF0F0;box-shadow:inset 0 0 0 1px var(--rouge)}
 .tuile.sel b{color:var(--rouge)}
+#tuiles-urgence .tuile{min-height:0;flex-direction:row;justify-content:center;padding:13px 12px}
+#tuiles-urgence .picto{font-size:.95rem}
 
 input[type=text],textarea,select{
   width:100%;background:var(--carte);border:1.5px solid var(--ligne);
@@ -175,6 +190,18 @@ textarea{resize:vertical;min-height:88px}
 .aide-carte{font-size:.74rem;color:var(--gris);margin-top:7px;line-height:1.4}
 .leaflet-control-attribution{font-size:.62rem!important}
 
+/* ── Carte globale ───────────────────── */
+#carte-globale-map{
+  height:calc(100dvh - 330px);min-height:320px;
+  border-radius:var(--radius);overflow:hidden;
+  border:1px solid var(--ligne);background:var(--fond);
+}
+.legende{display:flex;gap:18px;margin-top:10px;font-size:.78rem;color:var(--gris);font-weight:600}
+.legende i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px}
+.popup-sig{display:flex;flex-direction:column;gap:4px;font-size:.82rem}
+.popup-sig b{font-size:.9rem}
+.popup-sig .badges{display:flex;gap:6px;margin-top:2px}
+
 .actions{display:flex;gap:10px;margin-top:28px}
 .btn{flex:1;padding:16px;border-radius:var(--radius);font-weight:800;font-size:1rem;text-align:center}
 .btn-primaire{background:var(--rouge);color:#fff}
@@ -228,6 +255,11 @@ textarea{resize:vertical;min-height:88px}
       <span class="lbl"><b>Nouveau signalement</b><span>Photo · GPS · fonctionne hors ligne</span></span>
     </button>
 
+    <button id="btn-carte">
+      <span class="picto">🗺️</span>
+      <span class="lbl"><b>Carte des signalements</b><span>Tous les signalements de ce téléphone</span></span>
+    </button>
+
     <div class="section-titre">
       <span class="eyebrow">Signalements récents</span>
       <span class="compte" id="compte-liste"></span>
@@ -245,6 +277,14 @@ textarea{resize:vertical;min-height:88px}
         <button class="tuile" data-type="Vandalisme"><span class="picto">⚠️</span><b>Vandalisme<br>dégradation</b></button>
         <button class="tuile" data-type="Dépôt sauvage"><span class="picto">📦</span><b>Dépôt<br>sauvage</b></button>
         <button class="tuile" data-type="Autre"><span class="picto">✏️</span><b>Autre<br>anomalie</b></button>
+      </div>
+    </div>
+
+    <div class="champ">
+      <label class="eyebrow">Niveau d'urgence</label>
+      <div class="tuiles" id="tuiles-urgence">
+        <button class="tuile" data-urgence="routine"><span class="picto">🟢</span><b>Routine</b></button>
+        <button class="tuile" data-urgence="urgent"><span class="picto">🔴</span><b>Urgent</b></button>
       </div>
     </div>
 
@@ -271,7 +311,7 @@ textarea{resize:vertical;min-height:88px}
         </span>
         <button id="btn-gps">Actualiser</button>
       </div>
-      <div class="bascule-couche">
+      <div class="bascule-couche" id="bascule-formulaire">
         <button data-couche="plan" class="actif" type="button">Plan</button>
         <button data-couche="sat" type="button">Satellite</button>
       </div>
@@ -287,6 +327,30 @@ textarea{resize:vertical;min-height:88px}
     <div class="actions">
       <button class="btn btn-secondaire" id="btn-annuler">Annuler</button>
       <button class="btn btn-primaire" id="btn-enregistrer" disabled>Enregistrer</button>
+    </div>
+  </section>
+
+  <!-- ══ CARTE GLOBALE ══ -->
+  <section class="ecran" id="ecran-carte">
+    <div class="section-titre">
+      <span class="eyebrow">Carte des signalements</span>
+      <span class="compte" id="compte-carte"></span>
+    </div>
+
+    <div class="bascule-couche" id="bascule-globale">
+      <button data-couche="plan" class="actif" type="button">Plan</button>
+      <button data-couche="sat" type="button">Satellite</button>
+    </div>
+    <div id="carte-globale-map"></div>
+
+    <div class="legende">
+      <span><i style="background:#B91E27"></i>Urgent</span>
+      <span><i style="background:#7C8560"></i>Routine</span>
+    </div>
+    <p class="aide-carte" id="carte-globale-note"></p>
+
+    <div class="actions">
+      <button class="btn btn-secondaire" id="btn-carte-retour">Retour</button>
     </div>
   </section>
 
@@ -413,8 +477,9 @@ async function majListe(){
     const statutHtml = r.statut === 'attente'
       ? '<span class="statut attente">En attente</span>'
       : '<span class="statut envoye">Envoyé</span>';
+    const urgenceHtml = r.urgence === 'urgent' ? '<span class="statut urgent">Urgent</span>' : '';
     let vignette = '<span class="vignette vide">📄</span>';
-    div.innerHTML = `${vignette}<span class="infos"><span class="type">${r.type}</span><span class="meta">${meta}</span></span>${statutHtml}`;
+    div.innerHTML = `${vignette}<span class="infos"><span class="type">${r.type}</span><span class="meta">${meta}</span></span>${urgenceHtml}${statutHtml}`;
     if (r.photos && r.photos.length){
       const img = document.createElement('img');
       img.className = 'vignette';
@@ -428,8 +493,9 @@ async function majListe(){
 
 // ── Formulaire : ouverture / réinitialisation ──────────
 function nouveauFormulaire(){
-  brouillon = { type:null, photos:[], gps:null };
-  document.querySelectorAll('.tuile').forEach(t => t.classList.remove('sel'));
+  brouillon = { type:null, urgence:'routine', photos:[], gps:null };
+  document.querySelectorAll('#tuiles-type .tuile').forEach(t => t.classList.remove('sel'));
+  document.querySelectorAll('#tuiles-urgence .tuile').forEach(t => t.classList.toggle('sel', t.dataset.urgence === 'routine'));
   document.getElementById('champ-lieu').value = '';
   document.getElementById('champ-comm').value = '';
   majGrillePhotos();
@@ -448,10 +514,19 @@ function nouveauFormulaire(){
 document.getElementById('tuiles-type').addEventListener('click', e => {
   const t = e.target.closest('.tuile');
   if (!t) return;
-  document.querySelectorAll('.tuile').forEach(x => x.classList.remove('sel'));
+  document.querySelectorAll('#tuiles-type .tuile').forEach(x => x.classList.remove('sel'));
   t.classList.add('sel');
   brouillon.type = t.dataset.type;
   majBoutonEnregistrer();
+});
+
+// ── Niveau d'urgence ───────────────────────────────────
+document.getElementById('tuiles-urgence').addEventListener('click', e => {
+  const t = e.target.closest('.tuile');
+  if (!t) return;
+  document.querySelectorAll('#tuiles-urgence .tuile').forEach(x => x.classList.remove('sel'));
+  t.classList.add('sel');
+  brouillon.urgence = t.dataset.urgence;
 });
 
 // ── Photos : capture + compression ─────────────────────
@@ -552,32 +627,59 @@ function majGpsUI(gps, message){
 // ── Carte (Leaflet) — fonds de carte imposés : CartoDB Light / IGN Géoplateforme ──
 const CENTRE_PAR_DEFAUT = [49.2891, -0.1132]; // Cabourg, repère par défaut avant toute position GPS
 
-const coucheplan = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-  attribution: '© OpenStreetMap, © CARTO',
-  maxZoom: 20, subdomains: 'abcd'
-});
-const coucheSatellite = L.tileLayer('https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=ORTHOIMAGERY.ORTHOPHOTOS&STYLE=normal&FORMAT=image%2Fjpeg&TILEMATRIXSET=PM&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}', {
-  attribution: '© IGN / Géoplateforme',
-  maxNativeZoom: 19, maxZoom: 20
-});
+// Chaque carte Leaflet doit disposer de ses propres instances de couches : cette
+// fabrique en fournit un jeu neuf (formulaire et carte globale ne peuvent pas les partager).
+function creerCouches(){
+  return {
+    plan: L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+      attribution: '© OpenStreetMap, © CARTO',
+      maxZoom: 20, subdomains: 'abcd'
+    }),
+    sat: L.tileLayer('https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=ORTHOIMAGERY.ORTHOPHOTOS&STYLE=normal&FORMAT=image%2Fjpeg&TILEMATRIXSET=PM&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}', {
+      attribution: '© IGN / Géoplateforme',
+      maxNativeZoom: 19, maxZoom: 20
+    })
+  };
+}
 
-// Repère personnalisé (rouge institutionnel), pas d'icône Leaflet par défaut
-const repereSignalement = L.divIcon({
-  className: 'repere-signalement',
-  html: '<svg width="30" height="42" viewBox="0 0 30 42" xmlns="http://www.w3.org/2000/svg">'
-      + '<path d="M15 0C6.7 0 0 6.7 0 15c0 10.9 15 27 15 27s15-16.1 15-27C30 6.7 23.3 0 15 0z" fill="#B91E27"/>'
-      + '<circle cx="15" cy="15" r="6.2" fill="#fff"/></svg>',
-  iconSize: [30, 42], iconAnchor: [15, 42]
-});
+// Bascule Plan/Satellite : branche les boutons d'un conteneur sur une carte et son jeu de couches
+function brancherBascule(conteneur, carte, couches){
+  let active = 'plan';
+  conteneur.querySelectorAll('button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const nom = btn.dataset.couche;
+      if (nom === active) return;
+      carte.removeLayer(couches[active]);
+      couches[nom].addTo(carte);
+      active = nom;
+      conteneur.querySelectorAll('button').forEach(b => b.classList.toggle('actif', b.dataset.couche === nom));
+    });
+  });
+}
 
-let carteLeaflet, marqueurSignalement, coucheActive = 'plan';
+// Repère personnalisé (pas d'icône Leaflet par défaut), couleur paramétrable
+function creerRepere(couleur){
+  return L.divIcon({
+    className: 'repere-signalement',
+    html: '<svg width="30" height="42" viewBox="0 0 30 42" xmlns="http://www.w3.org/2000/svg">'
+        + '<path d="M15 0C6.7 0 0 6.7 0 15c0 10.9 15 27 15 27s15-16.1 15-27C30 6.7 23.3 0 15 0z" fill="' + couleur + '"/>'
+        + '<circle cx="15" cy="15" r="6.2" fill="#fff"/></svg>',
+    iconSize: [30, 42], iconAnchor: [15, 42], popupAnchor: [0, -40]
+  });
+}
+const repereSignalement = creerRepere('#B91E27'); // rouge institutionnel : formulaire + urgents
+const repereRoutine     = creerRepere('#7C8560'); // vert : signalements « routine » sur la carte globale
+
+let carteLeaflet, marqueurSignalement;
 
 function initCarte(){
   if (carteLeaflet) return; // déjà créée, on ne recrée pas la carte à chaque ouverture du formulaire
   carteLeaflet = L.map('carte-map', { attributionControl: true, zoomControl: false })
     .setView(CENTRE_PAR_DEFAUT, 13);
-  coucheplan.addTo(carteLeaflet);
+  const couches = creerCouches();
+  couches.plan.addTo(carteLeaflet);
   L.control.zoom({ position: 'bottomright' }).addTo(carteLeaflet);
+  brancherBascule(document.getElementById('bascule-formulaire'), carteLeaflet, couches);
 
   marqueurSignalement = L.marker(CENTRE_PAR_DEFAUT, { draggable: true, icon: repereSignalement }).addTo(carteLeaflet);
   marqueurSignalement.on('dragend', () => {
@@ -585,18 +687,6 @@ function initCarte(){
     brouillon.gps = { lat: +pos.lat.toFixed(6), lon: +pos.lng.toFixed(6), precision: null, ajuste: true };
     majGpsUI(brouillon.gps);
   });
-
-  document.querySelectorAll('.bascule-couche button').forEach(btn => {
-    btn.addEventListener('click', () => basculerCouche(btn.dataset.couche));
-  });
-}
-
-function basculerCouche(nom){
-  if (nom === coucheActive || !carteLeaflet) return;
-  if (nom === 'sat'){ carteLeaflet.removeLayer(coucheplan); coucheSatellite.addTo(carteLeaflet); }
-  else { carteLeaflet.removeLayer(coucheSatellite); coucheplan.addTo(carteLeaflet); }
-  coucheActive = nom;
-  document.querySelectorAll('.bascule-couche button').forEach(b => b.classList.toggle('actif', b.dataset.couche === nom));
 }
 
 function positionnerCarte(lat, lon, zoom){
@@ -604,6 +694,64 @@ function positionnerCarte(lat, lon, zoom){
   carteLeaflet.setView([lat, lon], zoom || 18);
   marqueurSignalement.setLatLng([lat, lon]);
 }
+
+// ── Carte globale de tous les signalements ─────────────
+let carteGlobale, groupeMarqueurs;
+
+function echap(s){
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function popupSignalement(r){
+  const urgent  = r.urgence === 'urgent';
+  const attente = r.statut === 'attente';
+  const sousTitre = [FMT_DATE.format(new Date(r.creeLe)), r.lieu || null].filter(Boolean).map(echap).join(' · ');
+  return '<div class="popup-sig">'
+       + '<b>' + echap(r.type) + '</b>'
+       + '<span>' + sousTitre + '</span>'
+       + '<span class="badges">'
+       + '<span class="statut ' + (urgent ? 'urgent' : 'routine') + '">' + (urgent ? 'Urgent' : 'Routine') + '</span>'
+       + '<span class="statut ' + (attente ? 'attente' : 'envoye') + '">' + (attente ? 'En attente' : 'Envoyé') + '</span>'
+       + '</span></div>';
+}
+
+async function majCarteGlobale(){
+  const tous = await dbTous();
+  groupeMarqueurs.clearLayers();
+  const positions = [];
+  let sansGps = 0;
+  for (const r of tous){
+    if (!r.gps){ sansGps++; continue; }
+    L.marker([r.gps.lat, r.gps.lon], { icon: r.urgence === 'urgent' ? repereSignalement : repereRoutine })
+      .bindPopup(popupSignalement(r))
+      .addTo(groupeMarqueurs);
+    positions.push([r.gps.lat, r.gps.lon]);
+  }
+  document.getElementById('compte-carte').textContent = positions.length ? `${positions.length} sur la carte` : '';
+  document.getElementById('carte-globale-note').textContent = sansGps
+    ? `${sansGps} signalement${sansGps>1?'s':''} sans position GPS non affiché${sansGps>1?'s':''} sur la carte.` : '';
+  if (positions.length) carteGlobale.fitBounds(positions, { padding: [36, 36], maxZoom: 17, animate: false });
+  else carteGlobale.setView(CENTRE_PAR_DEFAUT, 13);
+}
+
+async function ouvrirCarteGlobale(){
+  afficher('ecran-carte');
+  if (!carteGlobale){
+    carteGlobale = L.map('carte-globale-map', { attributionControl: true, zoomControl: false })
+      .setView(CENTRE_PAR_DEFAUT, 13);
+    const couches = creerCouches();
+    couches.plan.addTo(carteGlobale);
+    L.control.zoom({ position: 'bottomright' }).addTo(carteGlobale);
+    groupeMarqueurs = L.layerGroup().addTo(carteGlobale);
+    brancherBascule(document.getElementById('bascule-globale'), carteGlobale, couches);
+  }
+  // L'écran vient de passer visible : on force le recalcul des dimensions avant de cadrer
+  carteGlobale.invalidateSize();
+  await majCarteGlobale();
+  setTimeout(() => carteGlobale.invalidateSize(), 60);
+}
+document.getElementById('btn-carte').addEventListener('click', ouvrirCarteGlobale);
+document.getElementById('btn-carte-retour').addEventListener('click', () => afficher('ecran-accueil'));
 
 // ── Bouton Enregistrer ─────────────────────────────────
 function majBoutonEnregistrer(){
@@ -618,6 +766,7 @@ document.getElementById('btn-enregistrer').addEventListener('click', async () =>
     creeLe: Date.now(),
     agent: localStorage.getItem('bv-agent') || '',
     type: brouillon.type,
+    urgence: brouillon.urgence || 'routine',
     lieu: document.getElementById('champ-lieu').value.trim(),
     commentaire: document.getElementById('champ-comm').value.trim(),
     gps: brouillon.gps,
@@ -651,7 +800,9 @@ async function rapportEnJSON(r){
   return {
     id: r.id,
     date: new Date(r.creeLe).toISOString(),
-    agent: r.agent, type: r.type, lieu: r.lieu, commentaire: r.commentaire,
+    agent: r.agent, type: r.type,
+    urgence: r.urgence === 'urgent' ? 'urgent' : 'routine',
+    lieu: r.lieu, commentaire: r.commentaire,
     latitude:  r.gps ? r.gps.lat : null,
     longitude: r.gps ? r.gps.lon : null,
     precision_m: r.gps ? r.gps.precision : null,
