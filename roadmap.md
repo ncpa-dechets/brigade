@@ -4,11 +4,14 @@
 
 ---
 
-## État actuel (v2)
+## État actuel (v4)
 
 - Signalement terrain : type, photo(s), GPS, commentaire
+- Niveau d'urgence (Routine / Urgent) à la saisie, répercuté dans l'export JSON
 - Fonctionnement hors ligne complet (IndexedDB + Service Worker)
 - Carte de vérification/ajustement de position sur le formulaire (fonds Plan CartoDB / Satellite IGN), un seul signalement affiché à la fois
+- Carte globale de tous les signalements du téléphone, code couleur par urgence (rouge = urgent, vert = routine)
+- Consultation du détail d'un signalement (photos, commentaire, position) et **suppression individuelle** avec annulation immédiate (undo)
 - Synchronisation : export JSON envoyé par mail → flux Power Automate → liste SharePoint (texte + GPS ; photos non encore incluses)
 
 ## Vision
@@ -17,14 +20,18 @@ Que la DMD dispose, sans ressaisie manuelle, d'une vue consolidée et fiable des
 
 ---
 
+## Livré depuis (anciennes priorités Phase 1)
+
+- ✅ **Carte globale des signalements** — écran carte affichant tous les signalements du téléphone, code couleur par urgence.
+- ✅ **Niveau d'urgence** — champ « Routine / Urgent » à la saisie, répercuté dans l'export JSON *(reste à ajouter une colonne « Urgence » dans la liste SharePoint côté flux Power Automate)*.
+- ✅ **Suppression d'un signalement** — via l'écran détail, avec annulation immédiate.
+
 ## Phase 1 — Prochaine étape (priorités validées)
 
 | Fonction | Description | Ce que ça implique techniquement |
 |---|---|---|
-| **Carte globale des signalements** | Un écran carte affichant *tous* les signalements enregistrés sur le téléphone (pas seulement celui en cours de saisie), avec un code couleur | Nouvel écran dans l'app : lit tous les signalements stockés localement, place un marqueur pour chacun sur la carte (mêmes fonds Plan/Satellite déjà en place). Code couleur possible par statut (en attente / synchronisé) ou par urgence — à choisir ensemble |
-| **Niveau d'urgence** | Chaque signalement peut être marqué « Routine » ou « Urgent » à la saisie | Ajout d'un champ dans le formulaire (deux boutons, sur le même principe que le choix du type). Répercuté dans l'export JSON, donc dans le flux Power Automate → une colonne « Urgence » à ajouter dans la liste SharePoint |
-
-*Notion technique : le « code couleur » veut juste dire que le repère sur la carte change d'apparence selon une valeur — par ex. rouge vif si urgent, gris si routine. Rien de plus complexe qu'une condition « si… alors ».*
+| **Modifier un signalement** | Corriger un signalement déjà enregistré (type, urgence, lieu, commentaire, voire position/photos) sans le recréer | Réutilise l'écran détail déjà en place : un mode édition qui pré-remplit les champs puis réenregistre l'objet dans IndexedDB avec le même `id`. Attention : repasser le statut à « attente » pour qu'une correction soit resynchronisée |
+| **Recherche / filtres de l'historique** | Filtrer la liste d'accueil par type, urgence ou statut (en attente / envoyé) | Filtrage côté page sur les signalements déjà chargés — utile surtout quand le nombre de signalements sur un téléphone devient important |
 
 ---
 
@@ -49,9 +56,8 @@ Que la DMD dispose, sans ressaisie manuelle, d'une vue consolidée et fiable des
 
 ## Comment avancer
 
-On traite un item de la Phase 1 à la fois. Pour démarrer, il faut juste trancher :
+On traite un item de la Phase 1 à la fois. Prochain arbitrage :
 
-1. **Carte globale ou niveau d'urgence en premier ?**
-2. Pour la carte globale : code couleur par **statut** (en attente/synchronisé) ou par **urgence** (une fois ce champ ajouté) ?
+1. **Modifier un signalement ou recherche/filtres en premier ?**
 
-Dès que c'est tranché, je fournis les fichiers modifiés — comme pour la carte de vérification, en ciblant uniquement ce qui change.
+Dès que c'est tranché, je fournis les fichiers modifiés — en ciblant uniquement ce qui change.
